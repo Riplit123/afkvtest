@@ -1346,7 +1346,8 @@ img { display: block; max-width: 100%; height: auto; }
   .hero-copy { width: min(89%, 500px); margin-inline-start: 2%; }
   .hero-title { font-size: clamp(1.08rem, 10.6cqw, 3.9rem); }
   .hero-logo { width: min(97%, 435px); margin-top: clamp(8px, 1.8dvh, 20px); }
-  .apparatus { --keyboard-height: clamp(88px, 18.4dvh, 173px); --monitor-aspect: 1.43; }
+  /* Give the 3D keyboard its own, larger touch-friendly area on phones. */
+  .apparatus { --keyboard-height: clamp(120px, 25dvh, 216px); --monitor-aspect: 1.43; }
   .desk-controls { align-self: center; margin-inline-end: 0; }
   .classroom { inset-block: -8px -58px; }
   .classroom-photo { object-position: 30% 50%; }
@@ -1361,6 +1362,9 @@ img { display: block; max-width: 100%; height: auto; }
   .layout { padding-block: clamp(29px, 9.2dvh, 52px) 9px; gap: clamp(11px, 2.35vw, 26px); }
   .apparatus { --keyboard-height: clamp(71px, 22dvh, 112px); }
   .hero-logo { margin-top: clamp(8px, 3.3dvh, 18px); }
+}
+@media (max-height: 505px) and (orientation: landscape) and (pointer: coarse) {
+  .apparatus { --keyboard-height: clamp(90px, 27dvh, 132px); }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; }
@@ -2905,6 +2909,7 @@ img { display: block; max-width: 100%; height: auto; }
   const near = 2;
   const far = 40;
   const travel = .25;
+  const mobileControls = matchMedia("(max-width: 850px), (max-width: 1024px) and (pointer: coarse)").matches;
 
   function ring([y, width, depth, radius]) {
     const corners = [
@@ -2984,11 +2989,16 @@ img { display: block; max-width: 100%; height: auto; }
     [.294, 16.05, 7.43, .29], [.374, 15.88, 7.24, .25]
   ]);
   const inset = mesh([[.374, 15.54, 6.89, .2], [.401, 15.46, 6.81, .2]]);
-  const macroCap = mesh([
+  const macroCap = mesh(mobileControls ? [
+    [.426, 3.61, 1.57, .16], [.552, 3.65, 1.61, .17],
+    [.914, 3.43, 1.39, .136], [.962, 3.38, 1.33, .114]
+  ] : [
     [.426, 3.54, 1.38, .16], [.552, 3.57, 1.42, .17],
     [.914, 3.25, 1.225, .136], [.962, 3.15, 1.163, .114]
   ]);
-  const macroLight = mesh([[.405, 3.61, 1.46, .17], [.454, 3.62, 1.46, .17]]);
+  const macroLight = mesh(mobileControls ? [
+    [.405, 3.67, 1.65, .17], [.454, 3.69, 1.65, .17]
+  ] : [[.405, 3.61, 1.46, .17], [.454, 3.62, 1.46, .17]]);
   const indicator = mesh([[.963, .46, .045, .021], [.977, .46, .045, .021]]);
   const borderLight = mesh([[.305, 13.9, .028, .012], [.326, 13.9, .028, .012]]);
   const aluminum = [.216, .194, .229];
@@ -3213,6 +3223,21 @@ img { display: block; max-width: 100%; height: auto; }
   const thumbForward = thumbPanel([[.289, .423, .47], [.325, .408, .5], [.489, .4, .489], [.53, .421, .466]], .044);
   const statusLight = thumbPanel([[-.026, .648, .656], [.002, .637, .661], [.096, .634, .657], [.118, .64, .648]], .019);
 
+  // The mouse shares the same projected scene as the keyboard, so enlarging its
+  // actual mesh keeps the lighting, perspective and shadow in sync on mobile.
+  function scaleMouseGeometry(source, factor) {
+    const mapped = new Map();
+    const convert = point => {
+      if (!mapped.has(point)) mapped.set(point, point.map(value => value * factor));
+      return mapped.get(point);
+    };
+    const rings = source.rings.map(level => level.map(convert));
+    const faces = source.faces.map(face => ({
+      points: face.points.map(convert), normal: face.normal
+    }));
+    return packMesh(rings, faces, true);
+  }
+
   const mouseParts = [
     { mesh: mouseBase, color: [.102, .11, .123] },
     { mesh: mouseShoulders, color: [.200, .217, .242] },
@@ -3229,7 +3254,11 @@ img { display: block; max-width: 100%; height: auto; }
     { mesh: thumbBack, color: [.255, .283, .32] },
     { mesh: thumbForward, color: [.247, .275, .314] },
     { mesh: statusLight, color: [.41, .77, .62], finish: 3 }
-  ].map(part => ({ ...part, x: 0, y: 0, z: 0, yaw: [1, 0], finish: part.finish ?? 1 }));
+  ].map(part => ({
+    ...part,
+    mesh: mobileControls ? scaleMouseGeometry(part.mesh, 1.2) : part.mesh,
+    x: 0, y: 0, z: 0, yaw: [1, 0], finish: part.finish ?? 1
+  }));
 
   const singles = count => Array(count).fill(1);
   const rows = [
@@ -3395,8 +3424,8 @@ img { display: block; max-width: 100%; height: auto; }
 
   function fitScene() {
     const compact = width < 520;
-    mouseMotion.homeX = compact ? 10.62 : 10.87;
-    mouseMotion.homeZ = compact ? -3.52 : .37;
+    mouseMotion.homeX = compact ? (mobileControls ? 10.15 : 10.62) : (mobileControls ? 10.52 : 10.87);
+    mouseMotion.homeZ = compact ? (mobileControls ? -3.32 : -3.52) : .37;
     const stage = board.getBoundingClientRect();
     const display = monitor.getBoundingClientRect();
     const targetX = display.left + display.width * .5 - stage.left;
@@ -3468,7 +3497,7 @@ img { display: block; max-width: 100%; height: auto; }
 
   function drawMouseShadow() {
     if (!mouseShadow) return;
-    const footprint = mouseBase.rings[0].map(point => pixel(projectedPoint(mouseParts[0], point)));
+    const footprint = mouseParts[0].mesh.rings[0].map(point => pixel(projectedPoint(mouseParts[0], point)));
     mouseShadow.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
     mouseShadow.clearRect(0, 0, width, height);
     const softness = Math.max(1.5, height * .024);
@@ -3860,12 +3889,16 @@ img { display: block; max-width: 100%; height: auto; }
       const right = Math.max(...xx);
       const top = Math.min(...yy);
       const bottom = Math.max(...yy);
+      // Keep the touch target at least 42px tall on phones, without distorting
+      // the actual 3D cap or stealing horizontal space from neighboring keys.
+      const hitHeight = mobileControls ? Math.max(42, bottom - top + 12) : bottom - top;
+      const hitTop = top - (hitHeight - (bottom - top)) / 2;
       key.style.setProperty("--key-left", left + "px");
-      key.style.setProperty("--key-top", top + "px");
+      key.style.setProperty("--key-top", hitTop + "px");
       key.style.setProperty("--key-width", (right - left) + "px");
-      key.style.setProperty("--key-height", (bottom - top) + "px");
+      key.style.setProperty("--key-height", hitHeight + "px");
       const origin = pixel(project(part.x, .967 + part.y, part.z + .04));
-      key.style.setProperty("--legend-top", (origin[1] - top) + "px");
+      key.style.setProperty("--legend-top", (origin[1] - hitTop) + "px");
       const availableWidth = (right - left) * .84;
       const desired = Math.min(17, Math.max(9.9, width * .022), Math.max(9.2, (bottom - top) * .68));
       const minimum = Math.min(desired, width >= 590 ? 11.7 : 9.05);
@@ -4073,209 +4106,3 @@ img { display: block; max-width: 100%; height: auto; }
  </script>
 </body>
 </html>
-
-<!-- Font: Open Sans ExtraBold, subset.
-
-                                 Apache License
-                           Version 2.0, January 2004
-                        http://www.apache.org/licenses/
-
-   TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
-
-   1. Definitions.
-
-      "License" shall mean the terms and conditions for use, reproduction,
-      and distribution as defined by Sections 1 through 9 of this document.
-
-      "Licensor" shall mean the copyright owner or entity authorized by
-      the copyright owner that is granting the License.
-
-      "Legal Entity" shall mean the union of the acting entity and all
-      other entities that control, are controlled by, or are under common
-      control with that entity. For the purposes of this definition,
-      "control" means (i) the power, direct or indirect, to cause the
-      direction or management of such entity, whether by contract or
-      otherwise, or (ii) ownership of fifty percent (50%) or more of the
-      outstanding shares, or (iii) beneficial ownership of such entity.
-
-      "You" (or "Your") shall mean an individual or Legal Entity
-      exercising permissions granted by this License.
-
-      "Source" form shall mean the preferred form for making modifications,
-      including but not limited to software source code, documentation
-      source, and configuration files.
-
-      "Object" form shall mean any form resulting from mechanical
-      transformation or translation of a Source form, including but
-      not limited to compiled object code, generated documentation,
-      and conversions to other media types.
-
-      "Work" shall mean the work of authorship, whether in Source or
-      Object form, made available under the License, as indicated by a
-      copyright notice that is included in or attached to the work
-      (an example is provided in the Appendix below).
-
-      "Derivative Works" shall mean any work, whether in Source or Object
-      form, that is based on (or derived from) the Work and for which the
-      editorial revisions, annotations, elaborations, or other modifications
-      represent, as a whole, an original work of authorship. For the purposes
-      of this License, Derivative Works shall not include works that remain
-      separable from, or merely link (or bind by name) to the interfaces of,
-      the Work and Derivative Works thereof.
-
-      "Contribution" shall mean any work of authorship, including
-      the original version of the Work and any modifications or additions
-      to that Work or Derivative Works thereof, that is intentionally
-      submitted to Licensor for inclusion in the Work by the copyright owner
-      or by an individual or Legal Entity authorized to submit on behalf of
-      the copyright owner. For the purposes of this definition, "submitted"
-      means any form of electronic, verbal, or written communication sent
-      to the Licensor or its representatives, including but not limited to
-      communication on electronic mailing lists, source code control systems,
-      and issue tracking systems that are managed by, or on behalf of, the
-      Licensor for the purpose of discussing and improving the Work, but
-      excluding communication that is conspicuously marked or otherwise
-      designated in writing by the copyright owner as "Not a Contribution."
-
-      "Contributor" shall mean Licensor and any individual or Legal Entity
-      on behalf of whom a Contribution has been received by Licensor and
-      subsequently incorporated within the Work.
-
-   2. Grant of Copyright License. Subject to the terms and conditions of
-      this License, each Contributor hereby grants to You a perpetual,
-      worldwide, non-exclusive, no-charge, royalty-free, irrevocable
-      copyright license to reproduce, prepare Derivative Works of,
-      publicly display, publicly perform, sublicense, and distribute the
-      Work and such Derivative Works in Source or Object form.
-
-   3. Grant of Patent License. Subject to the terms and conditions of
-      this License, each Contributor hereby grants to You a perpetual,
-      worldwide, non-exclusive, no-charge, royalty-free, irrevocable
-      (except as stated in this section) patent license to make, have made,
-      use, offer to sell, sell, import, and otherwise transfer the Work,
-      where such license applies only to those patent claims licensable
-      by such Contributor that are necessarily infringed by their
-      Contribution(s) alone or by combination of their Contribution(s)
-      with the Work to which such Contribution(s) was submitted. If You
-      institute patent litigation against any entity (including a
-      cross-claim or counterclaim in a lawsuit) alleging that the Work
-      or a Contribution incorporated within the Work constitutes direct
-      or contributory patent infringement, then any patent licenses
-      granted to You under this License for that Work shall terminate
-      as of the date such litigation is filed.
-
-   4. Redistribution. You may reproduce and distribute copies of the
-      Work or Derivative Works thereof in any medium, with or without
-      modifications, and in Source or Object form, provided that You
-      meet the following conditions:
-
-      (a) You must give any other recipients of the Work or
-          Derivative Works a copy of this License; and
-
-      (b) You must cause any modified files to carry prominent notices
-          stating that You changed the files; and
-
-      (c) You must retain, in the Source form of any Derivative Works
-          that You distribute, all copyright, patent, trademark, and
-          attribution notices from the Source form of the Work,
-          excluding those notices that do not pertain to any part of
-          the Derivative Works; and
-
-      (d) If the Work includes a "NOTICE" text file as part of its
-          distribution, then any Derivative Works that You distribute must
-          include a readable copy of the attribution notices contained
-          within such NOTICE file, excluding those notices that do not
-          pertain to any part of the Derivative Works, in at least one
-          of the following places: within a NOTICE text file distributed
-          as part of the Derivative Works; within the Source form or
-          documentation, if provided along with the Derivative Works; or,
-          within a display generated by the Derivative Works, if and
-          wherever such third-party notices normally appear. The contents
-          of the NOTICE file are for informational purposes only and
-          do not modify the License. You may add Your own attribution
-          notices within Derivative Works that You distribute, alongside
-          or as an addendum to the NOTICE text from the Work, provided
-          that such additional attribution notices cannot be construed
-          as modifying the License.
-
-      You may add Your own copyright statement to Your modifications and
-      may provide additional or different license terms and conditions
-      for use, reproduction, or distribution of Your modifications, or
-      for any such Derivative Works as a whole, provided Your use,
-      reproduction, and distribution of the Work otherwise complies with
-      the conditions stated in this License.
-
-   5. Submission of Contributions. Unless You explicitly state otherwise,
-      any Contribution intentionally submitted for inclusion in the Work
-      by You to the Licensor shall be under the terms and conditions of
-      this License, without any additional terms or conditions.
-      Notwithstanding the above, nothing herein shall supersede or modify
-      the terms of any separate license agreement you may have executed
-      with Licensor regarding such Contributions.
-
-   6. Trademarks. This License does not grant permission to use the trade
-      names, trademarks, service marks, or product names of the Licensor,
-      except as required for reasonable and customary use in describing the
-      origin of the Work and reproducing the content of the NOTICE file.
-
-   7. Disclaimer of Warranty. Unless required by applicable law or
-      agreed to in writing, Licensor provides the Work (and each
-      Contributor provides its Contributions) on an "AS IS" BASIS,
-      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
-      implied, including, without limitation, any warranties or conditions
-      of TITLE, NON-INFRINGEMENT, MERCHANTABILITY, or FITNESS FOR A
-      PARTICULAR PURPOSE. You are solely responsible for determining the
-      appropriateness of using or redistributing the Work and assume any
-      risks associated with Your exercise of permissions under this License.
-
-   8. Limitation of Liability. In no event and under no legal theory,
-      whether in tort (including negligence), contract, or otherwise,
-      unless required by applicable law (such as deliberate and grossly
-      negligent acts) or agreed to in writing, shall any Contributor be
-      liable to You for damages, including any direct, indirect, special,
-      incidental, or consequential damages of any character arising as a
-      result of this License or out of the use or inability to use the
-      Work (including but not limited to damages for loss of goodwill,
-      work stoppage, computer failure or malfunction, or any and all
-      other commercial damages or losses), even if such Contributor
-      has been advised of the possibility of such damages.
-
-   9. Accepting Warranty or Additional Liability. While redistributing
-      the Work or Derivative Works thereof, You may choose to offer,
-      and charge a fee for, acceptance of support, warranty, indemnity,
-      or other liability obligations and/or rights consistent with this
-      License. However, in accepting such obligations, You may act only
-      on Your own behalf and on Your sole responsibility, not on behalf
-      of any other Contributor, and only if You agree to indemnify,
-      defend, and hold each Contributor harmless for any liability
-      incurred by, or claims asserted against, such Contributor by reason
-      of your accepting any such warranty or additional liability.
-
-   END OF TERMS AND CONDITIONS
-
-   APPENDIX: How to apply the Apache License to your work.
-
-      To apply the Apache License to your work, attach the following
-      boilerplate notice, with the fields enclosed by brackets "[]"
-      replaced with your own identifying information. (Don't include
-      the brackets!)  The text should be enclosed in the appropriate
-      comment syntax for the file format. We also recommend that a
-      file or class name and description of purpose be included on the
-      same "printed page" as the copyright notice for easier
-      identification within third-party archives.
-
-   Copyright [yyyy] [name of copyright owner]
-
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-
--->
