@@ -450,6 +450,9 @@ img { display: block; max-width: 100%; height: auto; }
 }
 .welcome-body > * { flex: none; }
 .course-description:focus-visible { outline-offset: -2px; }
+#welcome {
+  --welcome-reading-size: calc(var(--text-fit) * clamp(.60rem, min(2.32cqw, 4.5cqh), 1.24rem));
+}
 .welcome-overview {
   display: grid;
   gap: clamp(4px, 1.55cqh, 9px);
@@ -458,13 +461,13 @@ img { display: block; max-width: 100%; height: auto; }
   background: #efe3f38c;
 }
 .welcome-copy {
-  font-size: calc(var(--text-fit) * clamp(.625rem, min(2.52cqw, 4.85cqh), 1.34rem));
+  font-size: var(--welcome-reading-size);
   line-height: 1.28;
   text-wrap: wrap;
   overflow-wrap: anywhere;
 }
 .welcome-budget {
-  justify-self: start;
+  justify-self: center;
   padding: .16em .48em;
   border: 0;
   border-radius: .38em;
@@ -474,7 +477,7 @@ img { display: block; max-width: 100%; height: auto; }
   font-size: calc(var(--text-fit) * clamp(.74rem, min(3.05cqw, 5.25cqh), 1.65rem));
   font-weight: 800;
   line-height: 1.2;
-  text-align: start;
+  text-align: center;
   cursor: pointer;
   transition: background-color .18s;
 }
@@ -495,22 +498,27 @@ img { display: block; max-width: 100%; height: auto; }
   text-align: center;
   white-space: nowrap;
 }
+.welcome-activities > li:nth-child(1) { color: #175d88; }
+.welcome-activities > li:nth-child(2) { color: #8b431d; }
+.welcome-activities > li:nth-child(3) { color: #246345; }
 .welcome-topics {
   margin-block-start: auto;
   padding-block-start: clamp(3px, 1.45cqh, 10px);
   border-block-start: 1px solid var(--line);
   color: var(--muted);
-  font-size: calc(var(--text-fit) * clamp(.56rem, min(2.04cqw, 4.05cqh), .94rem));
+  font-size: var(--welcome-reading-size);
   line-height: 1.25;
   overflow-wrap: anywhere;
 }
 @container (min-height: 400px) {
-  #welcome { --pane-gap: clamp(10px, 2.65cqh, 17px); }
+  #welcome {
+    --pane-gap: clamp(10px, 2.65cqh, 17px);
+    --welcome-reading-size: calc(var(--text-fit) * clamp(1.08rem, 4.15cqh, 1.52rem));
+  }
   .welcome-head { min-height: 0; }
   .welcome-body { gap: calc(var(--text-fit) * clamp(8px, 1.9cqh, 12px)); }
   .welcome-copy {
     max-inline-size: 72ch;
-    font-size: calc(var(--text-fit) * clamp(1.2rem, 4.55cqh, 1.68rem));
     line-height: 1.32;
   }
   .welcome-activities {
@@ -884,41 +892,69 @@ img { display: block; max-width: 100%; height: auto; }
   min-width: 0;
   min-height: 0;
 }
+/* The complete card surface rotates, while the number stays on a separate layer. */
 .step-card {
   --step-pad: clamp(4px, 2.15cqh, 12px);
   --step-inset: clamp(4px, 1.33cqw, 12px);
+  --step-gap: clamp(3px, 1.18cqw, 11px);
+  --step-number-size: calc(var(--text-fit) * var(--step-badge, clamp(13px, min(3.95cqw, 8.4cqh), 29px)));
   display: grid;
   grid-template: minmax(0, 1fr) / minmax(0, 1fr);
   min-width: 0;
   min-height: 0;
-  overflow: clip;
-  border: 1px solid #9d7db43b;
   border-radius: clamp(5px, 1.3cqw, 10px);
-  background: #eee1f3a6;
   color: #4c3158;
   text-decoration: none;
-  transition: background-color .22s ease, border-color .22s ease;
+  perspective: 750px;
+  isolation: isolate;
 }
 .step-card:focus-visible { outline: 2px solid #6b4a83; outline-offset: 1px; }
+.step-flip {
+  grid-area: 1 / 1;
+  display: grid;
+  grid-template: minmax(0, 1fr) / minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+  transform: rotateX(0deg);
+  transform-origin: 50% 50%;
+  transform-style: preserve-3d;
+  transition: transform .65s cubic-bezier(.45, .05, .24, 1);
+  pointer-events: none;
+}
 .step-front, .step-detail {
   grid-area: 1 / 1;
   min-width: 0;
   min-height: 0;
-  padding: calc(var(--text-fit) * var(--step-pad)) var(--step-inset);
+  margin: 0;
+  padding-block: calc(var(--text-fit) * var(--step-pad));
+  padding-inline: calc(var(--step-inset) + var(--step-number-size) + var(--step-gap)) var(--step-inset);
   overflow-wrap: anywhere;
+  border: 1px solid #9d7db43b;
+  border-radius: inherit;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
 }
+.step-flip { border-radius: inherit; }
 .step-front {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   align-content: safe center;
   align-items: center;
-  gap: calc(var(--text-fit) * clamp(2px, .95cqh, 5px)) clamp(3px, 1.18cqw, 11px);
-  transition: opacity .22s var(--ease-out), transform .28s var(--ease-out);
+  gap: calc(var(--text-fit) * clamp(2px, .95cqh, 5px));
+  background: #eee1f3a6;
+  transform: rotateX(0deg);
 }
 .step-number {
+  grid-area: 1 / 1;
+  align-self: center;
+  justify-self: start;
+  position: relative;
+  z-index: 2;
+  margin-inline-start: calc(1px + var(--step-inset));
+  pointer-events: none;
   display: grid;
   place-items: center;
-  width: calc(var(--text-fit) * var(--step-badge, clamp(13px, min(3.95cqw, 8.4cqh), 29px)));
+  width: var(--step-number-size);
   aspect-ratio: 1;
   border-radius: 50%;
   color: #4c3158;
@@ -932,7 +968,7 @@ img { display: block; max-width: 100%; height: auto; }
   font-size: calc(var(--text-fit) * clamp(.63rem, 2.48cqw, 1.39rem));
 }
 .step-copy {
-  grid-column: 2;
+  grid-column: 1;
   color: var(--muted);
   font-size: calc(var(--text-fit) * clamp(.62rem, 2.1cqw, 1.15rem));
 }
@@ -944,28 +980,14 @@ img { display: block; max-width: 100%; height: auto; }
   color: #4c3158;
   font-size: calc(var(--text-fit) * var(--step-type));
   line-height: 1.23;
-  visibility: hidden;
-  opacity: 0;
-  transform: translateY(5px);
-  pointer-events: none;
-  transition: opacity .2s var(--ease-out), transform .27s var(--ease-out), visibility 0s .2s;
-}
-.step-card:is(:hover, :focus-within) {
-  border-color: #9672ad9c;
   background: #eadcf0;
+  border-color: #9672ad9c;
+  transform: rotateX(180deg);
 }
-.step-card:is(:hover, :focus-within) .step-front {
-  opacity: 0;
-  transform: translateY(-5px);
-  pointer-events: none;
+.step-card:is([data-auto-detail], [data-step-hover], :focus-visible) .step-flip {
+  transform: rotateX(-180deg);
 }
-.step-card:is(:hover, :focus-within) .step-detail {
-  visibility: visible;
-  opacity: 1;
-  transform: translateY(0);
-  pointer-events: auto;
-  transition: opacity .24s var(--ease-out) .045s, transform .28s var(--ease-out) .045s, visibility 0s;
-}
+.enroll-steps[data-reset-flip] .step-flip { transition: none; }
 .step-card--navigator .step-detail {
   text-align: center;
   font-weight: 770;
@@ -1264,6 +1286,102 @@ img { display: block; max-width: 100%; height: auto; }
   cursor: pointer;
 }
 .question-submit:hover { background: #654072; }
+.question-submit:disabled { opacity: .65; cursor: wait; }
+
+/* Confirmation inside the monitor, without external assets or libraries. */
+.question-success {
+  min-width: 0;
+  min-height: 0;
+  grid-row: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(3px, 1.55cqh, 12px);
+  text-align: center;
+  color: #34243d;
+}
+.question-success-art {
+  flex: 0 0 auto;
+  display: block;
+  width: clamp(34px, min(23cqw, 31cqh), 142px);
+  height: auto;
+  overflow: visible;
+}
+.question-success-disc {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: question-success-disc .72s cubic-bezier(.22,.8,.28,1) both;
+}
+.question-success-orbit {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: question-success-orbit 1.05s .13s ease-out both;
+}
+.question-success-ring {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+  animation: question-success-draw .8s .13s cubic-bezier(.3,.65,.3,1) both;
+}
+.question-success-check {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+  animation: question-success-draw .48s .57s cubic-bezier(.25,.6,.3,1) both;
+}
+.question-success-spark {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: question-success-spark .65s .73s cubic-bezier(.2,.75,.3,1) both;
+}
+.question-success-spark--late { animation-delay: .86s; }
+.question-success-copy {
+  display: grid;
+  gap: clamp(2px, .8cqh, 5px);
+  max-width: 100%;
+  animation: question-success-copy .55s .42s var(--ease-out) both;
+}
+.question-success-heading {
+  margin: 0;
+  font: 800 clamp(.68rem, min(3.55cqw, 6.2cqh), 1.65rem)/1.13 var(--display);
+  letter-spacing: -.025em;
+}
+.question-success-note {
+  margin: 0;
+  color: #63516a;
+  font-size: clamp(.49rem, min(2.05cqw, 3.8cqh), .94rem);
+  font-weight: 600;
+  line-height: 1.2;
+}
+.question-success-done {
+  margin-inline-start: 0;
+  margin-block-start: clamp(0px, .65cqh, 5px);
+  animation: question-success-copy .5s .65s var(--ease-out) both;
+}
+@keyframes question-success-disc {
+  from { opacity: 0; transform: scale(.66); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes question-success-orbit {
+  from { opacity: 0; transform: scale(.76); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes question-success-draw {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
+}
+@keyframes question-success-spark {
+  0% { opacity: 0; transform: scale(.15); }
+  65% { opacity: 1; transform: scale(1.12); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes question-success-copy {
+  from { opacity: 0; transform: translateY(7px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .question-success *, .question-success { animation: none !important; }
+}
+
 
 .game-player {
   position: absolute;
@@ -1594,10 +1712,16 @@ img { display: block; max-width: 100%; height: auto; }
   .period dt { letter-spacing: -.02em; }
   .period-soon { inset-inline-end: 1px; padding-inline: .45em; }
   .step-card { --step-pad: 3px; --step-inset: 4px; }
-  .step-front {
-    grid-template-columns: minmax(0, 1fr);
-    gap: calc(var(--text-fit) * 2px);
+  .step-number {
+    grid-area: 1 / 1;
+    align-self: start;
+    margin-block-start: calc(1px + var(--text-fit) * var(--step-pad));
   }
+  .step-front, .step-detail {
+    padding-inline: var(--step-inset);
+    padding-block-start: calc(var(--step-number-size) + 2 * var(--text-fit) * var(--step-pad));
+  }
+  .step-front { gap: calc(var(--text-fit) * 2px); }
   .enroll-steps strong, .step-copy { display: none; }
   .step-short {
     display: block;
@@ -1951,7 +2075,7 @@ img { display: block; max-width: 100%; height: auto; }
                       <p><span class="detail-text">Представь свой проект или реши задачу в команде</span><span class="brief-text">Покажи свой проект</span></p>
                     </div>
                     <div class="event-card-detail" id="contests-description">
-                      <p><span class="detail-text">Соревнования по робототехнике, инженерные чемпионаты и конкурсы 2D- и 3D-моделирования, в том числе из перечня ГИР</span><span class="brief-text">Робототехника, 3D и конкурсы из перечня ГИР</span></p>
+                      <p><span class="detail-text">Проверь свои знания, прояви творческий подход и представь результаты своей работы на конкурсах, в том числе из перечня ГИР</span><span class="brief-text">Прояви свои способности на конкурсах, в том числе из перечня ГИР</span></p>
                     </div>
                   </article>
                   <article class="event-card event-card--talks" tabindex="0" aria-labelledby="talks-title" aria-describedby="talks-description">
@@ -1960,7 +2084,7 @@ img { display: block; max-width: 100%; height: auto; }
                       <p><span class="detail-text">Узнай о науке и технологиях от специалистов</span><span class="brief-text">Послушай экспертов</span></p>
                     </div>
                     <div class="event-card-detail" id="talks-description">
-                      <p><span class="detail-text">На встречах со специалистами разбираемся, как работают нейросети, как создаётся 3D-графика и чем занимаются инженеры</span><span class="brief-text">О нейросетях, 3D-графике и работе инженеров</span></p>
+                      <p><span class="detail-text">Открой для себя мир науки и технологий, познакомься с современными разработками и задай вопросы экспертам</span><span class="brief-text">Узнай о научных открытиях и современных технологиях</span></p>
                     </div>
                   </article>
                   <article class="event-card event-card--workshops" tabindex="0" aria-labelledby="workshops-title" aria-describedby="workshops-description">
@@ -1969,7 +2093,7 @@ img { display: block; max-width: 100%; height: auto; }
                       <p><span class="detail-text">Освой новый инструмент и сделай что-то своими руками</span><span class="brief-text">Сделай сам</span></p>
                     </div>
                     <div class="event-card-detail" id="workshops-description">
-                      <p><span class="detail-text">С помощью наставника собери модель робота, спроектируй деталь в 3D или создай сцену в дополненной реальности</span><span class="brief-text">Собираем роботов, моделируем и создаём AR-сцены</span></p>
+                      <p><span class="detail-text">Осваивай новые навыки, экспериментируй и создавай собственные проекты под руководством опытных наставников</span><span class="brief-text">Осваивай навыки и создавай новое вместе с наставниками</span></p>
                     </div>
                   </article>
                   <article class="event-card event-card--practice" tabindex="0" aria-labelledby="practice-title" aria-describedby="practice-description">
@@ -1978,7 +2102,7 @@ img { display: block; max-width: 100%; height: auto; }
                       <p><span class="detail-text">Примерь роль специалиста и выполни рабочую задачу</span><span class="brief-text">Примерь профессию</span></p>
                     </div>
                     <div class="event-card-detail" id="practice-description">
-                      <p><span class="detail-text">Примерь роль программиста или инженера медоборудования — напиши небольшую программу или собери прототип прибора на Arduino</span><span class="brief-text">Пишем код или собираем прибор на Arduino</span></p>
+                      <p><span class="detail-text">Познакомься с современными профессиями, выполни реальные профессиональные задачи и узнай, какое направление тебе ближе</span><span class="brief-text">Попробуй себя в разных профессиях и найди своё направление</span></p>
                     </div>
                   </article>
                 </div>
@@ -2003,9 +2127,10 @@ img { display: block; max-width: 100%; height: auto; }
               </dl>
               <ol class="enroll-steps" aria-label="Порядок записи">
                 <li>
-                  <a class="step-card step-card--navigator" href="https://р52.навигатор.дети/directivities" aria-label="Каталог программ в «Навигаторе»" draggable="false">
+                  <a class="step-card step-card--navigator" href="https://xn--52-kmc.xn--80aafey1amqq.xn--d1acj3b/directivities?organizators=594" aria-label="Каталог программ в «Навигаторе»" draggable="false">
+                    <span class="step-number" aria-hidden="true">1</span>
+                    <span class="step-flip">
                     <span class="step-front">
-                      <span class="step-number" aria-hidden="true">1</span>
                       <strong>Изучите программы набора</strong>
                       <span class="step-copy">и запишитесь в навигаторе</span>
                       <span class="step-short">Программы и запись</span>
@@ -2013,12 +2138,14 @@ img { display: block; max-width: 100%; height: auto; }
                     <span class="step-detail">
                       <span>Программы в «Навигаторе» <span class="step-arrow" aria-hidden="true"></span></span>
                     </span>
+                    </span>
                   </a>
                 </li>
                 <li>
                   <div class="step-card" tabindex="0" aria-labelledby="enroll-email-title" aria-describedby="enroll-email-detail">
+                    <span class="step-number" aria-hidden="true">2</span>
+                    <div class="step-flip">
                     <div class="step-front">
-                      <span class="step-number" aria-hidden="true">2</span>
                       <strong id="enroll-email-title">Дождитесь письма</strong>
                       <span class="step-copy">с одобрением заявки</span>
                       <span class="step-short">Письмо с одобрением</span>
@@ -2027,12 +2154,14 @@ img { display: block; max-width: 100%; height: auto; }
                       <span class="detail-text">Мы увидим вашу заявку и пришлём письмо на электронную почту, указанную в вашем профиле в «Навигаторе»</span>
                       <span class="brief-text">Письмо придёт на почту из профиля в «Навигаторе»</span>
                     </p>
+                    </div>
                   </div>
                 </li>
                 <li>
                   <div class="step-card" tabindex="0" aria-labelledby="enroll-documents-title" aria-describedby="enroll-documents-detail">
+                    <span class="step-number" aria-hidden="true">3</span>
+                    <div class="step-flip">
                     <div class="step-front">
-                      <span class="step-number" aria-hidden="true">3</span>
                       <strong id="enroll-documents-title">Подайте документы</strong>
                       <span class="step-copy">по списку из письма</span>
                       <span class="step-short">Подача документов</span>
@@ -2041,11 +2170,12 @@ img { display: block; max-width: 100%; height: auto; }
                       <span class="detail-text">В письме будет указан перечень всех документов, которые надо подготовить для окончательного зачисления</span>
                       <span class="brief-text">Перечень документов для зачисления будет в письме</span>
                     </p>
+                    </div>
                   </div>
                 </li>
               </ol>
               <div class="enroll-footer">
-                <a class="site-link" href="https://kvantorium52.ru/about/dokumenty-dlya-zachisleniya/" draggable="false">Подробнее на сайте</a>
+                <a class="site-link" href="https://kvantorium52.ru/programms/kvantumy/" draggable="false">Подробнее на сайте</a>
               </div>
             </section>
 
@@ -2102,7 +2232,9 @@ img { display: block; max-width: 100%; height: auto; }
                   <h2 class="question-title" id="question-title" tabindex="-1">Задать вопрос</h2>
                   <button class="question-close" type="button" aria-label="Закрыть окно"></button>
                 </header>
-                <form class="question-form" method="dialog">
+                <!-- Set data-submit-url to your same-origin POST JSON handler when it is ready.
+                     A real success requires HTTP 2xx and JSON {"success":true}. Empty = demo only. -->
+                <form class="question-form" method="dialog" data-submit-url="">
                   <label class="question-field">
                     <span>ФИО <small>необязательно</small></span>
                     <input name="name" type="text" autocomplete="name" placeholder="Как к вам обращаться" maxlength="120">
@@ -2132,6 +2264,25 @@ img { display: block; max-width: 100%; height: auto; }
                     <button class="question-submit" type="submit">Отправить</button>
                   </div>
                 </form>
+                <div class="question-success" hidden>
+                  <svg class="question-success-art" viewBox="0 0 144 144" fill="none" aria-hidden="true" focusable="false">
+                    <circle class="question-success-orbit" cx="72" cy="72" r="63" stroke="#d8c9e0" stroke-width="1.3" stroke-dasharray="3 6"/>
+                    <circle class="question-success-disc" cx="72" cy="72" r="49" fill="#e3eee6"/>
+                    <circle class="question-success-ring" cx="72" cy="72" r="40" pathLength="1" stroke="#467759" stroke-width="2.8" stroke-linecap="round" transform="rotate(-90 72 72)"/>
+                    <path class="question-success-check" d="M53 72.5 66 85 91 59" pathLength="1" stroke="#356b4d" stroke-width="5.2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <g class="question-success-spark" stroke="#8e70a0" stroke-width="2.1" stroke-linecap="round">
+                      <path d="M117 20v12m-6-6h12"/><path d="M21 105v9m-4.5-4.5h9"/>
+                    </g>
+                    <g class="question-success-spark question-success-spark--late" fill="#ad94bb">
+                      <circle cx="26" cy="32" r="3"/><circle cx="119" cy="110" r="3"/>
+                    </g>
+                  </svg>
+                  <div class="question-success-copy" role="status" aria-live="polite">
+                    <p class="question-success-heading">Обращение успешно отправлено</p>
+                    <p class="question-success-note">Спасибо! Мы свяжемся с вами выбранным способом.</p>
+                  </div>
+                  <button class="question-submit question-success-done" type="button">Готово</button>
+                </div>
               </section>
             </div>
             <dialog class="game-player" id="game-player" aria-label="Игра «БАЗА-0»">
@@ -2216,6 +2367,11 @@ img { display: block; max-width: 100%; height: auto; }
   const contactLabel = questionForm.querySelector(".question-contact-label");
   const { message, method, contact } = questionForm.elements;
   const questionSubmit = questionForm.querySelector(".question-submit");
+  const questionSuccess = questionOverlay.querySelector(".question-success");
+  const questionSuccessHeading = questionSuccess.querySelector(".question-success-heading");
+  const questionSuccessNote = questionSuccess.querySelector(".question-success-note");
+  const questionDone = questionSuccess.querySelector(".question-success-done");
+  let questionSending = false;
   const contactMethods = {
     max: { label: "Телефон или ссылка в МАКС", type: "text", placeholder: "+7 … или https://max.ru/…" },
     vk: { label: "Ссылка на профиль ВК", type: "url", placeholder: "https://vk.com/…" },
@@ -2226,6 +2382,11 @@ img { display: block; max-width: 100%; height: auto; }
   let expandedCourse = null;
   let coursePreview = null;
   let cardIntro = null;
+  let enrollDetailTimer = null;
+  let enrollStaggerTimers = [];
+  const enrollCards = [...enrollSteps.querySelectorAll(".step-card")];
+  const ENROLL_INTERVAL = 10000;
+  const ENROLL_STAGGER = 750;
   let pageAnimations = [];
   let lastNavigation = -Infinity;
   let fitFrame = 0;
@@ -2380,7 +2541,11 @@ img { display: block; max-width: 100%; height: auto; }
     clearPageAnimations();
     if (stopCoursePreview()) openCourse(null);
     stopCardIntro();
-    questionStatus.textContent = "";
+    if (!questionSuccess.hidden) {
+      questionSuccess.hidden = true;
+      questionForm.hidden = false;
+    }
+    if (!questionSending) questionStatus.textContent = "";
     questionOverlay.hidden = false;
     screenContent.inert = true;
     questionKey.setAttribute("aria-expanded", "true");
@@ -2400,6 +2565,23 @@ img { display: block; max-width: 100%; height: auto; }
   function toggleQuestion() {
     if (questionOverlay.hidden) openQuestion();
     else closeQuestion();
+  }
+
+  function showQuestionSuccess(demo) {
+    questionForm.reset();
+    contact.disabled = true;
+    contact.type = "text";
+    contact.placeholder = "Сначала выберите способ";
+    contact.autocomplete = "off";
+    contact.setCustomValidity("");
+    message.setCustomValidity("");
+    contactLabel.textContent = "Ваш контакт";
+    questionStatus.textContent = "";
+    questionSuccessHeading.textContent = demo ? "Форма успешно заполнена" : "Обращение успешно отправлено";
+    questionSuccessNote.textContent = demo ? "Демо-режим: данные не отправлены." : "Спасибо! Мы свяжемся с вами выбранным способом.";
+    questionForm.hidden = true;
+    questionSuccess.hidden = false;
+    if (!questionOverlay.hidden) questionDone.focus({ preventScroll: true });
   }
 
   function isContactLink(value) {
@@ -2510,6 +2692,48 @@ img { display: block; max-width: 100%; height: auto; }
     if (next === welcome) animateWelcome();
   }
 
+  // Every card has a 10-second cycle, offset by 750ms from its predecessor.
+  function stopEnrollDetailCycle() {
+    clearInterval(enrollDetailTimer);
+    enrollDetailTimer = null;
+    enrollStaggerTimers.forEach(clearTimeout);
+    enrollStaggerTimers = [];
+    enrollSteps.setAttribute("data-reset-flip", "");
+    for (const card of enrollCards) {
+      card.removeAttribute("data-auto-detail");
+      card.removeAttribute("data-step-hover");
+    }
+    // Commit the reset without a visible reverse animation on re-entry.
+    void enrollSteps.offsetHeight;
+    enrollSteps.removeAttribute("data-reset-flip");
+  }
+
+  function startEnrollDetailCycle() {
+    stopEnrollDetailCycle();
+    if (activeView?.id !== "enroll" || document.hidden) return;
+    let showDetail = false;
+    enrollDetailTimer = setInterval(() => {
+      showDetail = !showDetail;
+      const nextDetail = showDetail;
+      enrollStaggerTimers = enrollCards.map((card, index) => setTimeout(() => {
+        if (activeView?.id === "enroll" && !document.hidden) {
+          card.toggleAttribute("data-auto-detail", nextDetail);
+        }
+      }, index * ENROLL_STAGGER));
+    }, ENROLL_INTERVAL);
+  }
+
+  document.addEventListener("visibilitychange", startEnrollDetailCycle);
+  for (const card of enrollCards) {
+    card.addEventListener("pointerenter", event => {
+      if (event.pointerType === "mouse" || event.pointerType === "pen") {
+        card.setAttribute("data-step-hover", "");
+      }
+    });
+    card.addEventListener("pointerleave", () => card.removeAttribute("data-step-hover"));
+    card.addEventListener("pointercancel", () => card.removeAttribute("data-step-hover"));
+  }
+
   function showView(next, fromKey = false) {
     closeQuestion(false);
     if (next === activeView) {
@@ -2533,6 +2757,7 @@ img { display: block; max-width: 100%; height: auto; }
     stopCardIntro();
     activeView = next;
     next.hidden = false;
+    startEnrollDetailCycle();
     queueTextFit();
 
     keys.forEach(key => {
@@ -2651,6 +2876,7 @@ img { display: block; max-width: 100%; height: auto; }
 
   questionKey.addEventListener("click", toggleQuestion);
   questionClose.addEventListener("click", () => closeQuestion());
+  questionDone.addEventListener("click", () => closeQuestion());
   window.addEventListener("keydown", event => {
     if (event.code !== "Space" || event.defaultPrevented || event.repeat || event.ctrlKey ||
         event.metaKey || event.altKey || event.shiftKey) return;
@@ -2666,10 +2892,11 @@ img { display: block; max-width: 100%; height: auto; }
       closeQuestion();
     } else if (event.key === "Tab") {
       const focused = document.activeElement;
+      const last = !questionSuccess.hidden ? questionDone : (questionSending ? questionForm.querySelector('[name="contact"]') : questionSubmit);
       if (event.shiftKey && (focused === questionClose || focused === questionTitle)) {
         event.preventDefault();
-        questionSubmit.focus();
-      } else if (!event.shiftKey && focused === questionSubmit) {
+        last.focus();
+      } else if (!event.shiftKey && focused === last) {
         event.preventDefault();
         questionClose.focus();
       }
@@ -2690,8 +2917,9 @@ img { display: block; max-width: 100%; height: auto; }
     event.target.setCustomValidity("");
     questionStatus.textContent = "";
   });
-  questionForm.addEventListener("submit", event => {
+  questionForm.addEventListener("submit", async event => {
     event.preventDefault();
+    if (questionSending || !questionSuccess.hidden) return;
     if (!message.value.trim()) {
       message.setCustomValidity("Напишите ваш вопрос.");
       message.reportValidity();
@@ -2709,7 +2937,41 @@ img { display: block; max-width: 100%; height: auto; }
       contact.reportValidity();
       return;
     }
-    questionStatus.textContent = "Поля заполнены. Демо-режим.";
+    const endpoint = questionForm.dataset.submitUrl.trim();
+    if (!endpoint) {
+      showQuestionSuccess(true);
+      return;
+    }
+    const payload = Object.fromEntries(new FormData(questionForm));
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 20000);
+    questionSending = true;
+    questionSubmit.disabled = true;
+    questionSubmit.textContent = "Отправляем…";
+    questionForm.setAttribute("aria-busy", "true");
+    questionStatus.textContent = "";
+    try {
+      const url = new URL(endpoint, location.href);
+      if (url.origin !== location.origin || !["http:", "https:"].includes(url.protocol)) throw new Error("Invalid endpoint");
+      const response = await fetch(url, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json", "Accept": "application/json" },
+        body: JSON.stringify(payload),
+        signal: controller.signal
+      });
+      const result = await response.json();
+      if (!response.ok || result?.success !== true) throw new Error("Submission failed");
+      showQuestionSuccess(false);
+    } catch (error) {
+      questionStatus.textContent = "Не удалось подтвердить отправку. Попробуйте ещё раз.";
+    } finally {
+      clearTimeout(timeout);
+      questionSending = false;
+      questionSubmit.disabled = false;
+      questionSubmit.textContent = "Отправить";
+      questionForm.removeAttribute("aria-busy");
+    }
   });
 
   [...keys, welcome.querySelector(".welcome-budget")].forEach(trigger => {
