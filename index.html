@@ -907,6 +907,9 @@ img { display: block; max-width: 100%; height: auto; }
   text-decoration: none;
   perspective: 750px;
   isolation: isolate;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 .step-card:focus-visible { outline: 2px solid #6b4a83; outline-offset: 1px; }
 .step-flip {
@@ -984,9 +987,11 @@ img { display: block; max-width: 100%; height: auto; }
   border-color: #9672ad9c;
   transform: rotateX(180deg);
 }
-.step-card:is([data-auto-detail], [data-step-hover], :focus-visible) .step-flip {
+.step-card:not([data-step-manual]):is([data-auto-detail], [data-step-hover], :focus-visible) .step-flip,
+.step-card[data-step-manual="detail"] .step-flip {
   transform: rotateX(-180deg);
 }
+.step-card[data-step-manual="front"] .step-flip { transform: rotateX(0deg); }
 .enroll-steps[data-reset-flip] .step-flip { transition: none; }
 .step-card--navigator .step-detail {
   text-align: center;
@@ -2387,6 +2392,9 @@ img { display: block; max-width: 100%; height: auto; }
   const enrollCards = [...enrollSteps.querySelectorAll(".step-card")];
   const ENROLL_INTERVAL = 10000;
   const ENROLL_STAGGER = 750;
+  const enrollManualUntil = new WeakMap();
+  const enrollPress = new WeakMap();
+  const enrollTouchDevice = matchMedia("(hover: none) and (pointer: coarse)");
   let pageAnimations = [];
   let lastNavigation = -Infinity;
   let fitFrame = 0;
@@ -2702,6 +2710,9 @@ img { display: block; max-width: 100%; height: auto; }
     for (const card of enrollCards) {
       card.removeAttribute("data-auto-detail");
       card.removeAttribute("data-step-hover");
+      card.removeAttribute("data-step-manual");
+      enrollManualUntil.delete(card);
+      enrollPress.delete(card);
     }
     // Commit the reset without a visible reverse animation on re-entry.
     void enrollSteps.offsetHeight;
@@ -2718,20 +2729,87 @@ img { display: block; max-width: 100%; height: auto; }
       enrollStaggerTimers = enrollCards.map((card, index) => setTimeout(() => {
         if (activeView?.id === "enroll" && !document.hidden) {
           card.toggleAttribute("data-auto-detail", nextDetail);
+          if (performance.now() >= (enrollManualUntil.get(card) || 0)) {
+            card.removeAttribute("data-step-manual");
+            enrollManualUntil.delete(card);
+          }
         }
       }, index * ENROLL_STAGGER));
     }, ENROLL_INTERVAL);
   }
 
+  // Touch input deliberately separates revealing a card from following its link.
+  function enrollWantsDetail(card) {
+    const manual = card.getAttribute("data-step-manual");
+    if (manual !== null) return manual === "detail";
+    return card.hasAttribute("data-auto-detail") || card.hasAttribute("data-step-hover") || card.matches(":focus-visible");
+  }
+
+  function enrollBackIsReady(card) {
+    const transform = getComputedStyle(card.querySelector(".step-flip")).transform;
+    if (transform === "none") return false;
+    const matrix = new DOMMatrixReadOnly(transform);
+    // Only allow navigation when the back is facing the user, not mid-flip.
+    return matrix.m22 < -.998 && Math.abs(matrix.m23) < .06;
+  }
+
+  function setEnrollManual(card, detail) {
+    card.removeAttribute("data-step-hover");
+    card.setAttribute("data-step-manual", detail ? "detail" : "front");
+    // Give the visitor a full reading interval, even just before an auto flip.
+    enrollManualUntil.set(card, performance.now() + ENROLL_INTERVAL);
+  }
+
   document.addEventListener("visibilitychange", startEnrollDetailCycle);
   for (const card of enrollCards) {
     card.addEventListener("pointerenter", event => {
-      if (event.pointerType === "mouse" || event.pointerType === "pen") {
+      if (event.pointerType === "mouse") {
         card.setAttribute("data-step-hover", "");
       }
     });
     card.addEventListener("pointerleave", () => card.removeAttribute("data-step-hover"));
-    card.addEventListener("pointercancel", () => card.removeAttribute("data-step-hover"));
+    card.addEventListener("pointerdown", event => {
+      if (event.pointerType === "touch" || event.pointerType === "pen" || (enrollTouchDevice.matches && !event.pointerType)) {
+        card.removeAttribute("data-step-hover");
+        enrollPress.set(card, {
+          detail: enrollWantsDetail(card),
+          ready: enrollBackIsReady(card),
+          time: performance.now()
+        });
+      } else {
+        enrollPress.delete(card);
+      }
+    });
+    card.addEventListener("pointercancel", () => {
+      card.removeAttribute("data-step-hover");
+      enrollPress.delete(card);
+    });
+    card.addEventListener("click", event => {
+      const press = enrollPress.get(card);
+      enrollPress.delete(card);
+      const touch = event.pointerType === "touch" || event.pointerType === "pen" ||
+        (press && performance.now() - press.time < 1500) ||
+        (enrollTouchDevice.matches && event.detail > 0 && event.pointerType !== "mouse");
+      if (!touch) return;
+      const detail = press ? press.detail : enrollWantsDetail(card);
+      const ready = press ? press.ready : enrollBackIsReady(card);
+      if (card.matches("a[href]")) {
+        if (detail && ready && enrollWantsDetail(card) && enrollBackIsReady(card)) return;
+        event.preventDefault();
+        setEnrollManual(card, true);
+      } else {
+        event.preventDefault();
+        setEnrollManual(card, !detail);
+      }
+    });
+    if (!card.matches("a[href]")) {
+      card.setAttribute("role", "button");
+      card.addEventListener("keydown", event => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        setEnrollManual(card, !enrollWantsDetail(card));
+      });
+    }
   }
 
   function showView(next, fromKey = false) {
