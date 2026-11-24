@@ -2141,7 +2141,7 @@ img { display: block; max-width: 100%; height: auto; }
                       <span class="step-short">Программы и запись</span>
                     </span>
                     <span class="step-detail">
-                      <span>Программы в «Навигаторе» <span class="step-arrow" aria-hidden="true"></span></span>
+                      <span><span class="step-navigator-text">Программы в «Навигаторе» <span class="step-arrow" aria-hidden="true"></span></span></span>
                     </span>
                     </span>
                   </a>
@@ -2753,6 +2753,19 @@ img { display: block; max-width: 100%; height: auto; }
     return matrix.m22 < -.998 && Math.abs(matrix.m23) < .06;
   }
 
+  // The outer anchor is retained for desktop and keyboard navigation.
+  // On touch screens only the visible inline link text (including its arrow)
+  // is actionable; the empty area of the card remains a flip control.
+  function enrollNavigatorTextHit(card, event) {
+    const text = card.querySelector(".step-navigator-text");
+    if (!text || !Number.isFinite(event.clientX) || !Number.isFinite(event.clientY)) return false;
+    const { clientX: x, clientY: y } = event;
+    return Array.from(text.getClientRects()).some(rect =>
+      rect.width > 0 && rect.height > 0 &&
+      x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom
+    );
+  }
+
   function setEnrollManual(card, detail) {
     card.removeAttribute("data-step-hover");
     card.setAttribute("data-step-manual", detail ? "detail" : "front");
@@ -2774,6 +2787,7 @@ img { display: block; max-width: 100%; height: auto; }
         enrollPress.set(card, {
           detail: enrollWantsDetail(card),
           ready: enrollBackIsReady(card),
+          navigatorText: enrollNavigatorTextHit(card, event),
           time: performance.now()
         });
       } else {
@@ -2794,9 +2808,10 @@ img { display: block; max-width: 100%; height: auto; }
       const detail = press ? press.detail : enrollWantsDetail(card);
       const ready = press ? press.ready : enrollBackIsReady(card);
       if (card.matches("a[href]")) {
-        if (detail && ready && enrollWantsDetail(card) && enrollBackIsReady(card)) return;
+        const textHit = enrollNavigatorTextHit(card, event) && (!press || press.navigatorText);
+        if (detail && ready && textHit && enrollWantsDetail(card) && enrollBackIsReady(card)) return;
         event.preventDefault();
-        setEnrollManual(card, true);
+        setEnrollManual(card, !detail);
       } else {
         event.preventDefault();
         setEnrollManual(card, !detail);
